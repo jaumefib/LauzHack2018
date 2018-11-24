@@ -10,6 +10,8 @@ spanData = 7*24*60*60
 pathInfrastructure = "data/gtfs_complete/"
 # Stations list
 dataStations = {}
+# Routes list
+dataRoutes = {}
 
 actStation = 0
 
@@ -23,16 +25,6 @@ def stationCleanIdent(ident):
 
 def insertWalkable(idIn, idOut, kind, price):
     return True
-
-class Station:
-    def __init__(self, ident, id, name, lat, lon, peopleIn, peopleOut):
-        self.ident = ident
-        self.id = id
-        self.name = name
-        self.lat = lat
-        self.lom = lon
-        self.peopleIn = peopleIn
-        self.peopleOut = peopleOut
 
 def main():
     # Read stops
@@ -53,7 +45,7 @@ def main():
                 # Create node
                 stationId = insertStation(stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
                 # Create station object with node id
-                dataStations[stationIdent] = Station(stationIdent, stationId, stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
+                dataStations[stationIdent] = stationId
     # Read transfers
     with open(pathInfrastructure + 'transfers.txt', 'r') as csvfile:
         csvReader = csv.reader(csvfile, delimiter=',')
@@ -67,7 +59,16 @@ def main():
             walkablePrice = csvLine[3]
             # Create edge
             insertWalkable(walkableIdFrom, walkableIdTo, walkableKind, walkablePrice)
-
+    # Read routes (lines)
+    with open(pathInfrastructure + 'routes.txt', 'r') as csvfile:
+        csvReader = csv.reader(csvfile, delimiter=',')
+        # Remove headers
+        next(csvReader, None)
+        # For each line on the CSV
+        for csvLine in csvReader:
+            routeId = csvLine[0]
+            routeName = csvLine[3]
+            dataRoutes[routeId] = routeName
 
 if __name__ == "__main__":
     main()
