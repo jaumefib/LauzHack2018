@@ -21,6 +21,9 @@ def insertStation(ident, lon, lat, peopleIn, peopleOut):
 def stationCleanIdent(ident):
     return ident.split(':')[0]
 
+def insertWalkable(idIn, idOut, kind, price):
+    return True
+
 class Station:
     def __init__(self, ident, id, name, lat, lon, peopleIn, peopleOut):
         self.ident = ident
@@ -45,10 +48,26 @@ def main():
             stationLon = float(csvLine[5])
             stationPeopleIn = [0] * int(spanData/spanPeople)
             stationPeopleOut = [0] * int(spanData/spanPeople)
-            # Create node
-            stationId = insertStation(stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
-            # Create station object with node id
-            dataStations[stationIdent] = Station(stationIdent, stationId, stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
+            # Check if already exists
+            if stationIdent not in dataStations:
+                # Create node
+                stationId = insertStation(stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
+                # Create station object with node id
+                dataStations[stationIdent] = Station(stationIdent, stationId, stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
+    # Read transfers
+    with open(pathInfrastructure + 'transfers.txt', 'r') as csvfile:
+        csvReader = csv.reader(csvfile, delimiter=',')
+        # Remove headers
+        next(csvReader, None)
+        # For each line on the CSV
+        for csvLine in csvReader:
+            walkableIdFrom = stationCleanIdent(csvLine[0])
+            walkableIdTo = stationCleanIdent(csvLine[1])
+            walkableKind = csvLine[2]
+            walkablePrice = csvLine[3]
+            # Create edge
+            insertWalkable(walkableIdFrom, walkableIdTo, walkableKind, walkablePrice)
+
 
 if __name__ == "__main__":
     main()
