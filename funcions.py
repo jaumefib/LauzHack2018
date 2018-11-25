@@ -1,7 +1,7 @@
 import random
 
 def actualGraphCost():
-    return random.randint(100, 120)
+    return random.randint(100, 150)
 
 
 def obtainLines():
@@ -9,8 +9,12 @@ def obtainLines():
 
 
 def obtainLinesMostUsed(lines):
-    return {2: "R2", 1: "R1", 3: "R3"}
+    return {'R3.1': 'R3', 'R2.1': 'R2', 'R1.2': 'R1', 'B1.1': 'B1', 'R1.1': 'R1', 'R2.3': 'R2', 'R3.2': 'R3',
+            'B1.3': 'B1'}
 
+def obtainLinesLeastUsed(lines):
+    return {'B1.3': 'B1', 'R3.2': 'R3', 'R2.3': 'R2', 'R1.1': 'R1', 'B1.1': 'B1', 'R1.2': 'R1', 'R2.1': 'R2',
+            'R3.1': 'R3'}
 
 def modifyFreq(linia, accio):
     if accio == "increment":
@@ -24,7 +28,7 @@ def modifyFreq(linia, accio):
 
 
 def calculateCost():
-    return random.randint(40, 60)
+    return random.randint(40, 100)
 
 
 def calculateGraph():
