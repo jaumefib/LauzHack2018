@@ -35,10 +35,13 @@ def stationCleanIdent(ident):
 def insertWalkable(idIn, idOut, kind, time):
     return True
 
-def getLink(idIn, idOut, line, kind):
+def getLinkFreq(idIn, idOut, line, kind):
     return []
 
 def insertLink(idIn, idOut, line, lineId, frequencies, people, kind, price):
+    return True
+
+def updateLink(idIn, idOut, line, lineId, frequencies, people, kind, price):
     return True
 
 def tripCleanIdent(ident):
@@ -123,13 +126,13 @@ def main():
                 linkLineId = dataTrips[tripCleanIdent(stopTrip)]
                 linkLine = dataRoutes[linkLineId]
                 linkType = dataRoutesTypes[linkLine]
-                linkFrequency = getLink(linkIdIn, linkIdOut, linkLine, linkType)
+                linkFrequency = getLinkFreq(linkIdIn, linkIdOut, linkLine, linkType)
                 linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
                 if linkFrequency == []:
                     insertLink(linkIdIn, linkIdOut, linkLineId, linkLine, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
                     dataUniqueLines[linkLineId] = linkLine
                 else:
-                    insertLink(linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
+                    updateLink(linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
             previousStop = stopId
     for line in dataUniqueLines:
         print(line)
