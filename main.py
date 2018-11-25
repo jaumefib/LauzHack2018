@@ -46,13 +46,21 @@ def insertWalkable(tx, idIn, idOut, kind, time):
                          idIn=idIn, idOut=idOut, kind=kind, time=time):
         return True
 
-def getLinkFreq(tx, idIn, idOut, line):
+def getLinkFreq(tx, idIn, idOut, line, kind):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
-                         "MATCH (s1)-[R:LINE {line: {line}}]->(s2) "
+                         "MATCH (s1)-[R:LINE {line: {line}, kind: {kind}}]->(s2) "
                          "RETURN R.frequencies",
-                         idIn=idIn, idOut=idOut, line=line):
+                         idIn=idIn, idOut=idOut, line=line, kind=kind):
         return record["R.frequencies"]
+
+def getLinkPeople(tx, idIn, idOut, line, kind):
+    for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
+                         "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
+                         "MATCH (s1)-[R:LINE {line: {line}, kind: {kind}}]->(s2) "
+                         "RETURN R.people",
+                         idIn=idIn, idOut=idOut, line=line, kind=kind):
+        return record["R.people"]
 
 def insertLink(tx, idIn, idOut, line, lineId, frequencies, people, kind, price):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
@@ -67,6 +75,13 @@ def updateLink(tx, idIn, idOut, line, frequencies, kind):
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
                          "MATCH (s1)-[R:LINE { line: {line}, kind: {kind}}]->(s2) SET R.frequencies = {frequencies}",
                          idIn=idIn, idOut=idOut, line=line, frequencies=frequencies, kind=kind):
+        return True
+
+def updateLinkPeople(tx, idIn, idOut, line, people, kind):
+    for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
+                         "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
+                         "MATCH (s1)-[R:LINE { line: {line}, kind: {kind}}]->(s2) SET R.frequencies = {people}",
+                         idIn=idIn, idOut=idOut, line=line, people=people, kind=kind):
         return True
 
 def tripCleanIdent(ident):
@@ -159,7 +174,7 @@ def main():
                     linkLineId = dataTrips[tripCleanIdent(stopTrip)]
                     linkLine = dataRoutes[linkLineId]
                     linkType = dataRoutesTypes[linkLine]
-                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine)
+                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
                     linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
                     if linkFrequency == None:
                         session.read_transaction(insertLink, linkIdIn, linkIdOutGraph, linkLine, linkLineId, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
