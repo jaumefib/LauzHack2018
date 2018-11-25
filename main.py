@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime
 import ijson
+from special import *
 
 # Span (in seconds) for train frequencies
 spanFrequencies = 15*60
@@ -32,6 +33,7 @@ onlyStations = set()
 
 actStation = 0
 
+
 def insertStation(tx, station, long, lat, peopleIn, peopleOut):
     for record in tx.run("CREATE (s:STATION) "
                          "SET s.station = {station}, "
@@ -42,8 +44,10 @@ def insertStation(tx, station, long, lat, peopleIn, peopleOut):
                          "RETURN id(s)", station=station, long=long, lat=lat, peopleIn=peopleIn, peopleOut=peopleOut):
         return record["id(s)"]
 
+
 def stationCleanIdent(ident):
     return ident.split(':')[0]
+
 
 def insertWalkable(tx, idIn, idOut, kind, time):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
@@ -51,6 +55,7 @@ def insertWalkable(tx, idIn, idOut, kind, time):
                          "CREATE (s1)-[:TRANSBORD { kind: {kind}, time: {time}}]->(s2)",
                          idIn=idIn, idOut=idOut, kind=kind, time=time):
         return True
+
 
 def getLinkFreq(tx, idIn, idOut, line, kind):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
@@ -60,6 +65,7 @@ def getLinkFreq(tx, idIn, idOut, line, kind):
                          idIn=idIn, idOut=idOut, line=line, kind=kind):
         return record["R.frequencies"]
 
+
 def getLinkPeople(tx, idIn, idOut, line, kind):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
@@ -67,6 +73,7 @@ def getLinkPeople(tx, idIn, idOut, line, kind):
                          "RETURN R.people",
                          idIn=idIn, idOut=idOut, line=line, kind=kind):
         return record["R.people"]
+
 
 def insertLink(tx, idIn, idOut, line, lineId, frequencies, people, kind, price):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
@@ -76,12 +83,14 @@ def insertLink(tx, idIn, idOut, line, lineId, frequencies, people, kind, price):
                          price=price):
         return True
 
+
 def updateLink(tx, idIn, idOut, line, frequencies, kind):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
                          "MATCH (s1)-[R:LINE { line: {line}, kind: {kind}}]->(s2) SET R.frequencies = {frequencies}",
                          idIn=idIn, idOut=idOut, line=line, frequencies=frequencies, kind=kind):
         return True
+
 
 def updateLinkPeople(tx, idIn, idOut, line, people, kind):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
@@ -93,6 +102,7 @@ def updateLinkPeople(tx, idIn, idOut, line, people, kind):
 
 def tripCleanIdent(ident):
     return ident.split(':')[0]
+
 
 def main():
     try:
@@ -249,6 +259,7 @@ def main():
                 for i in range(0, segmentDuration):
                     freqPos = (int((segmentDay*24*60)/spanPeople)+segmentIni+i)
                     # Cridar funció get i update'''
+        problema()
 
 
 if __name__ == "__main__":

@@ -61,7 +61,7 @@ class NiceJourney:
         self.cost = value
 
 
-def main():
+def problema():
     print("Starting program")
     # Activate the database
     problem = NiceJourney(infinity)
@@ -69,6 +69,3 @@ def main():
     # print the resulting graph
     paintGraph()
 
-
-if __name__ == "__main__":
-    main()
