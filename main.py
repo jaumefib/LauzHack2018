@@ -90,33 +90,6 @@ def updateLinkPeople(tx, idIn, idOut, line, people, kind):
                          idIn=idIn, idOut=idOut, line=line, people=people, kind=kind):
         return True
 
-def getQuantityPeople(tx, lines, time):
-    linesPeople = {}
-    for lineId, line in lines.items():
-        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
-                             line=line):
-            x = record["R.people"]
-            linesPeople[lineId] = x[time]
-    return linesPeople
-
-def getFreq(tx, lines, time):
-    linesFreqs = {}
-    for lineId, line in lines.items():
-        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
-                             line=line):
-            x = record["R.frequencies"]
-            linesFreqs[lineId] = x[time]
-    return linesFreqs
-
-def getKind(tx, lines):
-    linesKinds = {}
-    for lineId, line in lines.items():
-        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
-                             line=line):
-            x = record["R.kind"]
-            linesKinds[lineId] = x
-    return linesKinds
-
 
 def tripCleanIdent(ident):
     return ident.split(':')[0]
