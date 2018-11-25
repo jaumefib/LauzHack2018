@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 
 # Span (in seconds) for train frequencies
 spanFrequencies = 15*60
@@ -16,6 +17,10 @@ dataRoutes = {}
 dataRoutesTypes = {}
 # Trips list
 dataTrips = {}
+# Services list
+dataFrequencies = {}
+# Unique lines list
+dataUniqueLines = {}
 
 actStation = 0
 
@@ -30,7 +35,10 @@ def stationCleanIdent(ident):
 def insertWalkable(idIn, idOut, kind, time):
     return True
 
-def insertLink(idIn, idOut, line, frequencies, people, kind, price):
+def getLink(idIn, idOut, line, kind):
+    return []
+
+def insertLink(idIn, idOut, line, lineId, frequencies, people, kind, price):
     return True
 
 def tripCleanIdent(ident):
@@ -92,6 +100,10 @@ def main():
             tripId = tripCleanIdent(csvLine[2])
             if tripRoute != previousRoute and tripId not in dataTrips:
                 dataTrips[tripId] = tripRoute
+                if tripId in dataFrequencies:
+                    dataFrequencies[tripId] = dataFrequencies[tripId] + 1
+                else:
+                    dataFrequencies[tripId] = 1
             previousRoute = tripRoute
     with open(pathInfrastructure + 'stop_times.txt', 'r') as csvfile:
         csvReader = csv.reader(csvfile, delimiter=',')
@@ -108,10 +120,19 @@ def main():
             elif stopTrip == previousTrip and tripCleanIdent(stopTrip) in dataTrips:
                 linkIdIn = dataStations[previousStop]
                 linkIdOut = stopId
-                linkLine = dataRoutes[dataTrips[tripCleanIdent(stopTrip)]]
+                linkLineId = dataTrips[tripCleanIdent(stopTrip)]
+                linkLine = dataRoutes[linkLineId]
                 linkType = dataRoutesTypes[linkLine]
-                insertLink(linkIdIn, linkIdOut, linkLine, [0] * int(spanData/spanFrequencies), [0] * int(spanData/spanPeople), linkType, 0)
+                linkFrequency = getLink(linkIdIn, linkIdOut, linkLine, linkType)
+                linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
+                if linkFrequency == []:
+                    insertLink(linkIdIn, linkIdOut, linkLineId, linkLine, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
+                    dataUniqueLines[linkLineId] = linkLine
+                else:
+                    insertLink(linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
             previousStop = stopId
+    for line in dataUniqueLines:
+        print(line)
 
 if __name__ == "__main__":
     main()
