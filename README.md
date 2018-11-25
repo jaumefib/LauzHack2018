@@ -1,1 +1,3 @@
-# LauzHack2018
+# GraphTIQ - LauzHack2018
+
+Project for the FAIRTIQ Challenge
