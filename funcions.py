@@ -1,40 +1,95 @@
 import random
+import operator
+
+quantityInLine, typeOfTransport, frecuencyOfLine = []
+cost = 0
 
 def actualGraphCost():
-    return random.randint(100, 150)
+    global quantityInLine, typeOfTransport, frecuencyOfLine
+    quantityInLine = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
+    typeOfTransport = session.read_transaction()
+    frecuencyOfLine = session.read_transaction()
+    global cost
+    cost = 0
+    keys = quantityInLine.keys()
+    for i in quantityInLine:
+        users = quantityInLine[i]
+        type = typeOfTransport[keys[i]]
+        frec = frecuencyOfLine[keys[i]]
+        capacity = 0
+        if type == 0:
+            capacity = 90
+        elif type == 1:
+            capacity = 100
+        elif type == 2:
+            capacity = 270
+        elif type == 3:
+            capacity = 90
+        elif type == 4:
+            capacity = 500
+        elif type == 5:
+            capacity = 6
+        else:
+            capacity = 5
+        cost = cost + (users - capacity*frec)**2
+    return cost
 
 
 def obtainLines():
-    return {1: "R1", 2: "R2", 3: "R3"}
-
+    global quantityInLine
+    return quantityInLine.values()
 
 def obtainLinesMostUsed(lines):
-    return {'R3.1': 'R3', 'R2.1': 'R2', 'R1.2': 'R1', 'B1.1': 'B1', 'R1.1': 'R1', 'R2.3': 'R2', 'R3.2': 'R3',
-            'B1.3': 'B1'}
+    #quantityInLine = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
+    #return sorted(quantityInLine.items(),key=operator.itemgetter(1))
+    global quantityInLine
+    return sorted(quantityInLine.values())
+
 
 def obtainLinesLeastUsed(lines):
-    return {'B1.3': 'B1', 'R3.2': 'R3', 'R2.3': 'R2', 'R1.1': 'R1', 'B1.1': 'B1', 'R1.2': 'R1', 'R2.1': 'R2',
-            'R3.1': 'R3'}
+    #quantityInLine = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
+    #return sorted(quantityInLine.items(), key=operator.itemgetter(1))
+    global quantityInLine
+    return sorted(quantityInLine, key=quantityInLine.get, reverse = True)
+
 
 def modifyFreq(linia, accio):
+    global quantityInLine, typeOfTransport, frecuencyOfLine, cost
+    user = quantityInLine[linia]
+    freq = frecuencyOfLine[linia]
+    type = typeOfTransport[linia]
+    if type == 0:
+        capacity = 90
+    elif type == 1:
+        capacity = 100
+    elif type == 2:
+        capacity = 270
+    elif type == 3:
+        capacity = 90
+    elif type == 4:
+        capacity = 500
+    elif type == 5:
+        capacity = 6
+    else:
+        capacity = 5
     if accio == "increment":
-        r = 1
         # increment the frecuency of the line
         # only if the value is less than the maximum
+        if freq+2 < 15:
+            cost = cost - (user - capacity*freq)**2 + (user - capacity*(freq+2))**2
+            frecuencyOfLine[linia] = freq+2
     elif accio == "decrease":
-        r = 2
         # decrease the frecuency of the line
         # only if the value is greater than the minimum
+        if freq-2 >= 0:
+            cost = cost - (user - capacity * freq) ** 2 + (user - capacity * (freq - 2)) ** 2
+            frecuencyOfLine[linia] = freq-2
+    return cost
 
-
-def calculateCost():
-    return random.randint(40, 100)
-
-
-def calculateGraph():
-    calcular = 100
+def calculateGraph(linia):
     # For the last modifyFreq with the modification in the line
-    # change the graph 
+    # change the graph
+
 
 def paintGraph():
     # paint the resultant graph

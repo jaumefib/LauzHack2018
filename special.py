@@ -15,15 +15,14 @@ def hill_climbing(problem):
         print("Lines in decreasing order of usage " + str(neighbours))
 
         b = True
-
+        lineModified = 0
         print("Increase")
         for i in neighbours:
-            modifyFreq(neighbours[i], "increase")
-            cost = calculateCost()
-            print(str(neighbours[i]) + " " + str(cost))
-            if problem.cost > cost:
+            c = modifyFreq(neighbours[i], "increase")
+            print(str(neighbours[i]) + " " + str(c))
+            if problem.cost > c:
                 print("problem cost > cost")
-                problem.cost = cost
+                problem.cost = c
                 print("New minimum cost " + str(problem.cost))
                 b = False
                 break
@@ -31,12 +30,11 @@ def hill_climbing(problem):
             neighbours = obtainLinesLeastUsed(lines)
             print("Decrease")
             for i in neighbours:
-                modifyFreq(neighbours[i], "decrease")
-                cost = calculateCost()
-                print(str(neighbours[i]) + " " + str(cost))
-                if problem.cost > cost:
+                c = modifyFreq(neighbours[i], "decrease")
+                print(str(neighbours[i]) + " " + str(c))
+                if problem.cost > c:
                     print("problem cost > cost")
-                    problem.cost = cost
+                    problem.cost = c
                     print("New minimum cost " + str(problem.cost))
                     b = False
                     break
@@ -45,7 +43,7 @@ def hill_climbing(problem):
         if b:
             break
         else:
-            calculateGraph()
+            calculateGraph(lineModified)
 
 
 class NiceJourney:
