@@ -10,7 +10,7 @@ spanPeople = 15*60
 # Span (in seconds) for data
 spanData = 7*24*60*60
 # Infrastructure data path
-pathInfrastructure = "data/gtfs_complete/"
+pathInfrastructure = "gtfs_complete/"
 # Stations list
 dataStations = {}
 # Routes list
@@ -46,21 +46,27 @@ def insertWalkable(tx, idIn, idOut, kind, time):
                          idIn=idIn, idOut=idOut, kind=kind, time=time):
         return True
 
-def getLinkFreq(tx, idIn, idOut, line, kind):
+def getLinkFreq(tx, idIn, idOut, line):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
-                         "MATCH (s1)-[R:LINE { line: {line}, kind: {kind}}]->(s2)"
+                         "MATCH (s1)-[R:LINE {line: {line}}]->(s2) "
                          "RETURN R.frequencies",
-                         idIn=idIn, idOut=idOut, line=line, fkind=kind):
+                         idIn=idIn, idOut=idOut, line=line):
         return record["R.frequencies"]
 
-def upsertLink(tx, idIn, idOut, line, lineId, frequencies, people, kind, price):
+def insertLink(tx, idIn, idOut, line, lineId, frequencies, people, kind, price):
     for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
                          "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
-                         "MERGE (s1)-[R:LINE { line: {line}, kind: {kind}, frequencies: {frequencies}, people: {people}, price: {price}}]->(s2)"
-                         "ON CREATE SET R.frequencies = {frequencies} ON MATCH SET R.frequencies = {frequencies}",
-                         idIn=idIn, idOut=idOut, line=line, frequencies=frequencies, people=people, kind=kind,
+                         "CREATE (s1)-[:LINE { lineId: {lineId}, line: {line}, frequencies: {frequencies}, people: {people}, kind: {kind}, price: {price}}]->(s2) ",
+                         idIn=idIn, idOut=idOut, lineId=lineId, line=line, frequencies=frequencies, people=people, kind=kind,
                          price=price):
+        return True
+
+def updateLink(tx, idIn, idOut, line, frequencies, kind):
+    for record in tx.run("MATCH (s1:STATION), (s2:STATION) "
+                         "WHERE id(s1) = {idIn} AND id(s2) = {idOut} "
+                         "MATCH (s1)-[R:LINE { line: {line}, kind: {kind}}]->(s2) SET R.frequencies = {frequencies}",
+                         idIn=idIn, idOut=idOut, line=line, frequencies=frequencies, kind=kind):
         return True
 
 def tripCleanIdent(ident):
@@ -105,7 +111,7 @@ def main():
                 walkableKind = csvLine[2]
                 walkableTime = csvLine[3]
                 # Create edge
-                session.read_transaction(insertWalkable, walkableIdFrom, walkableIdTo, walkableKind, walkableTime)
+                session.read_transaction(insertWalkable, dataStations[walkableIdFrom], dataStations[walkableIdTo], walkableKind, walkableTime)
         # Read routes (lines)
         with open(pathInfrastructure + 'routes.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
@@ -149,16 +155,17 @@ def main():
                 elif stopTrip == previousTrip and tripCleanIdent(stopTrip) in dataTrips:
                     linkIdIn = dataStations[previousStop]
                     linkIdOut = stopId
+                    linkIdOutGraph = dataStations[linkIdOut]
                     linkLineId = dataTrips[tripCleanIdent(stopTrip)]
                     linkLine = dataRoutes[linkLineId]
                     linkType = dataRoutesTypes[linkLine]
-                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOut, linkLine, linkType)
+                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine)
                     linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
-                    if linkFrequency == []:
-                        session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
+                    if linkFrequency == None:
+                        session.read_transaction(insertLink, linkIdIn, linkIdOutGraph, linkLine, linkLineId, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
                         dataUniqueLines[linkLineId] = linkLine
                     else:
-                        session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
+                        session.read_transaction(updateLink, linkIdIn, linkIdOutGraph, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], linkType)
                 previousStop = stopId
         '''with open(pathInfrastructure + 'frequencies.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
