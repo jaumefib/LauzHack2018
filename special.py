@@ -1,5 +1,6 @@
 infinity = float('inf')
 
+import funcions
 
 def hill_climbing(problem):
     """From the initial node, keep choosing the neighbor with highest value,
@@ -15,7 +16,7 @@ def hill_climbing(problem):
 
         for i in neighbours:
             modifyFreq(negibour[i],"increment") # ToDo: David
-            cost = calculateCost(neighbours[i]) # ToDo: David
+            cost = calculateCost() # ToDo: David
             if problem.cost > cost:
                 problem.cost = cost
                 b = False
