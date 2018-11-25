@@ -14,6 +14,7 @@ def hill_climbing(problem):
         b = True
 
         for i in neighbours:
+            modifyFreq(negibour[i],"increment") # ToDo: David
             cost = calculateCost(neighbours[i]) # ToDo: David
             if problem.cost > cost:
                 problem.cost = cost
@@ -31,16 +32,6 @@ class NiceJourney:
 
     def __init__(self, value):
         self.cost = value
-
-    def actions(self, state):
-        """Returns the list of actions which are allowed to be taken from the given state"""
-        # In this case increment or dicrease the frecuency
-        allowed_actions = ["increment", "dicrease"]
-        return allowed_actions
-
-    def result(self, state, action):
-        """Modify the state with the selected action"""
-        modify(state,action) # ToDo: David
 
 
 def main():
