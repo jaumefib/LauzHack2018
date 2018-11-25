@@ -4,7 +4,7 @@ import os
 import time
 from datetime import datetime
 import ijson
-from special import *
+#from special import *
 
 # Span (in seconds) for train frequencies
 spanFrequencies = 15*60
@@ -29,7 +29,11 @@ dataFrequencies = {}
 # Unique lines list
 dataUniqueLines = {}
 # Stations set
-onlyStations = set()
+onlyStations = {}
+# Routes set
+onlyRoutes = {}
+# Routes types
+onlyTypes = {}
 
 actStation = 0
 
@@ -117,9 +121,43 @@ def main():
             for segment in ijson.items(jsonFile, 'item.segments.item'):
                 segmentStationFrom = segment["startStation"]["id"]
                 segmentStationTo = segment["endStation"]["id"]
-                onlyStations.add(segmentStationFrom)
-                onlyStations.add(segmentStationTo)
-        # Read stops
+                onlyStations[segmentStationFrom] = segment["startStation"]["name"]
+                onlyStations[segmentStationTo] = segment["endStation"]["name"]
+                if "route" in segment:
+                    actName = segment["route"]["name"]
+                    if segment["route"]["name"] not in onlyRoutes:
+                        onlyRoutes[actName] = [(segmentStationFrom, segmentStationTo)]
+                        onlyTypes[actName] = int(segment["route"]["type"])
+                    else:
+                        onlyRoutes[actName].append((segmentStationFrom, segmentStationTo))
+        print("FINISH")
+        for station in onlyStations:
+            stationName = onlyStations[station]
+            stationLat = 0.0
+            stationLon = 0.0
+            stationPeopleIn = [0] * int(spanData / spanPeople)
+            stationPeopleOut = [0] * int(spanData / spanPeople)
+            stationId = session.read_transaction(insertStation, stationName, stationLat, stationLon,
+                                                         stationPeopleIn, stationPeopleOut)
+            dataStations[station] = stationId
+        for routeName, routeData in onlyRoutes.items():
+            for routeDataAct in routeData:
+                linkIdIn = dataStations[routeDataAct[0]]
+                linkIdOut = dataStations[routeDataAct[1]]
+                linkLineId = routeName
+                linkLine = routeName
+                linkType = onlyTypes[routeName]
+                linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOut, linkLine, linkType)
+                linkFrequencyAct = [1] * int(spanData / spanFrequencies)
+                if linkFrequency == None:
+                    session.read_transaction(insertLink, linkIdIn, linkIdOut, linkLine, linkLineId,
+                                             linkFrequencyAct, [0] * int(spanData / spanPeople), linkType, 0)
+                    dataUniqueLines[linkLineId] = linkLine
+                else:
+                    session.read_transaction(updateLink, linkIdIn, linkIdOut, linkLine,
+                                             [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], linkType)
+
+        '''# Read stops
         with open(pathInfrastructure + 'stops.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
             # Remove headers
@@ -138,7 +176,7 @@ def main():
                     stationId = session.read_transaction(insertStation, stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
                     # Create station object with node id
                     dataStations[stationIdent] = stationId
-        '''# Read transfers
+        # Read transfers
         with open(pathInfrastructure + 'transfers.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
             # Remove headers
@@ -150,7 +188,7 @@ def main():
                 walkableKind = csvLine[2]
                 walkableTime = csvLine[3]
                 # Create edge
-                session.read_transaction(insertWalkable, dataStations[walkableIdFrom], dataStations[walkableIdTo], walkableKind, walkableTime)'''
+                session.read_transaction(insertWalkable, dataStations[walkableIdFrom], dataStations[walkableIdTo], walkableKind, walkableTime)
         # Read routes (lines)
         with open(pathInfrastructure + 'routes.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
@@ -206,7 +244,7 @@ def main():
                             dataUniqueLines[linkLineId] = linkLine
                         else:
                             session.read_transaction(updateLink, linkIdIn, linkIdOutGraph, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], linkType)
-                    previousStop = stopId
+                    previousStop = stopId'''
         '''with open(pathInfrastructure + 'frequencies.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
             # Remove headers
@@ -259,7 +297,7 @@ def main():
                 for i in range(0, segmentDuration):
                     freqPos = (int((segmentDay*24*60)/spanPeople)+segmentIni+i)
                     # Cridar funció get i update'''
-        problema()
+        #problema()
 
 
 if __name__ == "__main__":
