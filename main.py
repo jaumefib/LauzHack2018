@@ -1,6 +1,7 @@
 import csv
 from neo4j.v1 import GraphDatabase
 import os
+import time
 
 # Span (in seconds) for train frequencies
 spanFrequencies = 15*60
@@ -159,8 +160,44 @@ def main():
                     else:
                         session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
                 previousStop = stopId
-        for line in dataUniqueLines:
-            print(line)
+        '''with open(pathInfrastructure + 'frequencies.txt', 'r') as csvfile:
+            csvReader = csv.reader(csvfile, delimiter=',')
+            # Remove headers
+            next(csvReader, None)
+            previousTrip = ''
+            previousStop = None
+            # For each line on the CSV
+            for csvLine in csvReader:
+                freqTrip = csvLine[0]
+                freqStart = csvLine[1]
+                freqTo = csvLine[2]
+                freqTime = csvLine[3]
+                freqStartTime = time.strptime(freqStart, "%H:%M:%S")
+                freqToTime = time.strptime(freqTo, "%H:%M:%S")
+                freqElapsed = freqToTime - freqStartTime
+                freqElapsedTimes = int(freqElapsed.total_seconds()/spanFrequencies)
+                freqElapsedTimesFrom = int((freqStartTime - time.strptime("00:00:00", "%H:%M:%S")).total_seconds()/spanFrequencies)
+                freqIni = [0] * int(spanData/spanFrequencies)
+                for i in range(0, freqElapsedTimes):
+                    freqIni[freqElapsedTimesFrom + i] = freqTime/spanFrequencies
+
+
+                if tripCleanIdent(stopTrip) != tripCleanIdent(previousTrip):
+                    previousTrip = stopTrip
+                elif stopTrip == previousTrip and tripCleanIdent(stopTrip) in dataTrips:
+                    linkIdIn = dataStations[previousStop]
+                    linkIdOut = stopId
+                    linkLineId = dataTrips[tripCleanIdent(stopTrip)]
+                    linkLine = dataRoutes[linkLineId]
+                    linkType = dataRoutesTypes[linkLine]
+                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOut, linkLine, linkType)
+                    linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
+                    if linkFrequency == []:
+                        session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
+                        dataUniqueLines[linkLineId] = linkLine
+                    else:
+                        session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
+                previousStop = stopId'''
 
 if __name__ == "__main__":
     main()
