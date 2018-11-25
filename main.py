@@ -2,6 +2,8 @@ import csv
 from neo4j.v1 import GraphDatabase
 import os
 import time
+from datetime import datetime
+import ijson
 
 # Span (in seconds) for train frequencies
 spanFrequencies = 15*60
@@ -11,6 +13,8 @@ spanPeople = 15*60
 spanData = 7*24*60*60
 # Infrastructure data path
 pathInfrastructure = "gtfs_complete/"
+# FairTIQ data path
+pathPeople = "data/"
 # Stations list
 dataStations = {}
 # Routes list
@@ -23,6 +27,8 @@ dataTrips = {}
 dataFrequencies = {}
 # Unique lines list
 dataUniqueLines = {}
+# Stations set
+onlyStations = set()
 
 actStation = 0
 
@@ -84,6 +90,34 @@ def updateLinkPeople(tx, idIn, idOut, line, people, kind):
                          idIn=idIn, idOut=idOut, line=line, people=people, kind=kind):
         return True
 
+def getQuantityPeople(tx, lines, time):
+    linesPeople = {}
+    for lineId, line in lines.items():
+        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
+                             line=line):
+            x = record["R.people"]
+            linesPeople[lineId] = x[time]
+    return linesPeople
+
+def getFreq(tx, lines, time):
+    linesFreqs = {}
+    for lineId, line in lines.items():
+        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
+                             line=line):
+            x = record["R.frequencies"]
+            linesFreqs[lineId] = x[time]
+    return linesFreqs
+
+def getKind(tx, lines):
+    linesKinds = {}
+    for lineId, line in lines.items():
+        for record in tx.run("MATCH ()-[R:LINE {line: line}]-()",
+                             line=line):
+            x = record["R.kind"]
+            linesKinds[lineId] = x
+    return linesKinds
+
+
 def tripCleanIdent(ident):
     return ident.split(':')[0]
 
@@ -95,6 +129,13 @@ def main():
         print("[ERROR] DB connection failed.")
         exit(1)
     with driver.session() as session:
+        # Read stations
+        with open(pathPeople + 'fairtiq_dataset.json', 'r') as jsonFile:
+            for segment in ijson.items(jsonFile, 'item.segments.item'):
+                segmentStationFrom = segment["startStation"]["id"]
+                segmentStationTo = segment["endStation"]["id"]
+                onlyStations.add(segmentStationFrom)
+                onlyStations.add(segmentStationTo)
         # Read stops
         with open(pathInfrastructure + 'stops.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
@@ -109,12 +150,12 @@ def main():
                 stationPeopleIn = [0] * int(spanData/spanPeople)
                 stationPeopleOut = [0] * int(spanData/spanPeople)
                 # Check if already exists
-                if stationIdent not in dataStations:
+                if stationIdent not in dataStations and stationIdent in onlyStations:
                     # Create node
                     stationId = session.read_transaction(insertStation, stationName, stationLat, stationLon, stationPeopleIn, stationPeopleOut)
                     # Create station object with node id
                     dataStations[stationIdent] = stationId
-        # Read transfers
+        '''# Read transfers
         with open(pathInfrastructure + 'transfers.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
             # Remove headers
@@ -126,7 +167,7 @@ def main():
                 walkableKind = csvLine[2]
                 walkableTime = csvLine[3]
                 # Create edge
-                session.read_transaction(insertWalkable, dataStations[walkableIdFrom], dataStations[walkableIdTo], walkableKind, walkableTime)
+                session.read_transaction(insertWalkable, dataStations[walkableIdFrom], dataStations[walkableIdTo], walkableKind, walkableTime)'''
         # Read routes (lines)
         with open(pathInfrastructure + 'routes.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
@@ -165,23 +206,24 @@ def main():
             for csvLine in csvReader:
                 stopTrip = csvLine[0]
                 stopId = stationCleanIdent(csvLine[3])
-                if tripCleanIdent(stopTrip) != tripCleanIdent(previousTrip):
-                    previousTrip = stopTrip
-                elif stopTrip == previousTrip and tripCleanIdent(stopTrip) in dataTrips:
-                    linkIdIn = dataStations[previousStop]
-                    linkIdOut = stopId
-                    linkIdOutGraph = dataStations[linkIdOut]
-                    linkLineId = dataTrips[tripCleanIdent(stopTrip)]
-                    linkLine = dataRoutes[linkLineId]
-                    linkType = dataRoutesTypes[linkLine]
-                    linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
-                    linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
-                    if linkFrequency == None:
-                        session.read_transaction(insertLink, linkIdIn, linkIdOutGraph, linkLine, linkLineId, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
-                        dataUniqueLines[linkLineId] = linkLine
-                    else:
-                        session.read_transaction(updateLink, linkIdIn, linkIdOutGraph, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], linkType)
-                previousStop = stopId
+                if stopId in onlyStations:
+                    if tripCleanIdent(stopTrip) != tripCleanIdent(previousTrip):
+                        previousTrip = stopTrip
+                    elif stopTrip == previousTrip and tripCleanIdent(stopTrip) in dataTrips:
+                        linkIdIn = dataStations[previousStop]
+                        linkIdOut = stopId
+                        linkIdOutGraph = dataStations[linkIdOut]
+                        linkLineId = dataTrips[tripCleanIdent(stopTrip)]
+                        linkLine = dataRoutes[linkLineId]
+                        linkType = dataRoutesTypes[linkLine]
+                        linkFrequency = session.read_transaction(getLinkFreq, linkIdIn, linkIdOutGraph, linkLine, linkType)
+                        linkFrequencyAct = [(float(dataFrequencies[tripCleanIdent(stopTrip)])/float(24*60/spanFrequencies))] * int(spanData/spanFrequencies)
+                        if linkFrequency == None:
+                            session.read_transaction(insertLink, linkIdIn, linkIdOutGraph, linkLine, linkLineId, linkFrequencyAct, [0] * int(spanData/spanPeople), linkType, 0)
+                            dataUniqueLines[linkLineId] = linkLine
+                        else:
+                            session.read_transaction(updateLink, linkIdIn, linkIdOutGraph, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], linkType)
+                    previousStop = stopId
         '''with open(pathInfrastructure + 'frequencies.txt', 'r') as csvfile:
             csvReader = csv.reader(csvfile, delimiter=',')
             # Remove headers
@@ -220,6 +262,21 @@ def main():
                     else:
                         session.read_transaction(upsertLink, linkIdIn, linkIdOut, linkLineId, linkLine, [x + y for x, y in zip(linkFrequency, linkFrequencyAct)], [0] * int(spanData / spanPeople), linkType, 0)
                 previousStop = stopId'''
+        '''with open(pathPeople + 'fairtiq_dataset.json', 'r') as jsonFile:
+            for segment in ijson.items(jsonFile, 'item.segments.item'):
+                print(segment)
+                segmentStationFrom = segment["startStation"]["id"]
+                segmentStationTo = segment["endStation"]["id"]
+                segmentTimeFrom = datetime.strptime(segment["startAt"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                segmentTimeTo = datetime.strptime(segment["endAt"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                segmentDuration = int((segmentTimeTo - segmentTimeFrom).total_seconds()/spanPeople)
+                segmentDay = segmentTimeFrom.weekday()
+                segmentIni = int((segmentTimeFrom - datetime.strptime(str(segmentTimeFrom.year) + "-" + str(segmentTimeFrom.month) + "-" + str(segmentTimeFrom.day) + "T00:00:00", "%Y-%m-%dT%H:%M:%S")).total_seconds()/spanPeople)
+                segmentKind = int(segment["route"]["type"])
+                for i in range(0, segmentDuration):
+                    freqPos = (int((segmentDay*24*60)/spanPeople)+segmentIni+i)
+                    # Cridar funció get i update'''
+
 
 if __name__ == "__main__":
     main()
